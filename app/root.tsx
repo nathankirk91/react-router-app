@@ -1,14 +1,19 @@
 import {
+  data,
   isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
+import { rootAuthLoader } from "@clerk/react-router/ssr.server";
+import { getToast } from "./utils/toast.server";
+import { combineHeaders } from "./utils/misc.server";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -24,7 +29,26 @@ export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
 ];
 
+//This loader function works for typesafety in useLoaderData<typeof loader>() in the component
+
+// export async function loader(args: Route.LoaderArgs) {
+//   return rootAuthLoader(args, async () => {
+//     return { data: "something" };
+//   });
+// }
+
+//This loader function does not work for typesafety in useLoaderData<typeof loader>() in the component also has an error on the rootAuthLoader()
+
+export async function loader(args: Route.LoaderArgs) {
+  return rootAuthLoader(args, async () => {
+    const { toast, headers: toastHeaders } = await getToast(args.request);
+    return data({ toast }, { headers: combineHeaders(toastHeaders) });
+  });
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useLoaderData<typeof loader>();
+  //^^ This doesn't have the correct types when using data() in the rootAuthLoader() within loader()
   return (
     <html lang="en">
       <head>
